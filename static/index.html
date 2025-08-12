@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Object Recognition Translator</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    video { border: 2px solid black; border-radius: 10px; }
+    button { padding: 10px 20px; margin-top: 10px; }
+    select { padding: 5px; margin: 10px; }
+    .results { margin-top: 20px; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h1>Object Recognition & Translation</h1>
+  <video id="video" autoplay playsinline width="320" height="240"></video>
+  <br>
+  <select id="language">
+    <option value="es">Spanish</option>
+    <option value="fr">French</option>
+    <option value="de">German</option>
+    <option value="it">Italian</option>
+    <option value="ja">Japanese</option>
+    <option value="zh">Chinese</option>
+    <option value="he">Hebrew</option>
+  </select>
+  <br>
+  <button id="capture">Capture & Translate</button>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <div class="results">
+    <p><strong>Detected (English):</strong> <span id="eng"></span></p>
+    <p><strong>Translated:</strong> <span id="trans"></span></p>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('capture');
+    const engEl = document.getElementById('eng');
+    const transEl = document.getElementById('trans');
+    const langSelect = document.getElementById('language');
+
+    // Start camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => { console.error("Camera error:", err); });
+
+    // Capture button click
+    captureBtn.addEventListener('click', async () => {
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append("file", blob, "capture.jpg");
+        formData.append("target_lang", langSelect.value);
+
+        const res = await fetch("/recognize", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+
+        engEl.textContent = data.object_name;
+        transEl.textContent = data.translated_name;
+      }, "image/jpeg");
+    });
+  </script>
+</body>
+</html>
